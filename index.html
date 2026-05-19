@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockMaster: Simulador de Logística</title>
+    <meta name="description" content="Um jogo minimalista e viciante de gestão de estoque e logística. Organize seu armazém, despache pedidos no prazo e evolua sua operação!">
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- HEADER PRINCIPAL -->
+        <header class="app-header">
+            <div class="header-logo">
+                <i data-lucide="warehouse" class="logo-icon"></i>
+                <div>
+                    <h1>StockMaster</h1>
+                    <span class="logo-tagline">Simulador de Logística</span>
+                </div>
+            </div>
+            
+            <div class="header-stats">
+                <div class="stat-badge" id="hud-day-badge">
+                    <i data-lucide="calendar"></i>
+                    <div>
+                        <span class="badge-label">Dia</span>
+                        <span class="badge-value" id="hud-day">1</span>
+                    </div>
+                </div>
+                
+                <div class="stat-badge" id="hud-quota-badge">
+                    <i data-lucide="trending-up"></i>
+                    <div>
+                        <span class="badge-label">Meta do Dia</span>
+                        <span class="badge-value" id="hud-quota">R$ 150 / R$ 500</span>
+                    </div>
+                </div>
+
+                <div class="stat-badge alert-pulse" id="event-banner" style="display: none;">
+                    <i data-lucide="bell" class="event-icon"></i>
+                    <div>
+                        <span class="badge-label" id="event-title">Evento Ativo</span>
+                        <span class="badge-value" id="event-desc">Nenhum</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-controls">
+                <button class="icon-btn" id="btn-sound" aria-label="Alternar Som" title="Alternar Som">
+                    <i data-lucide="volume-2" id="icon-sound"></i>
+                </button>
+                <button class="icon-btn" id="btn-help" aria-label="Ver Tutorial" title="Ver Tutorial">
+                    <i data-lucide="help-circle"></i>
+                </button>
+                <button class="btn btn-secondary" id="btn-restart">
+                    <i data-lucide="rotate-ccw"></i> Reiniciar
+                </button>
+            </div>
+        </header>
+
+        <!-- CORPO DO JOGO -->
+        <main class="game-layout">
+            <!-- COLUNA ESQUERDA: CONTROLE & UPGRADES -->
+            <section class="panel panel-left" aria-labelledby="heading-control">
+                <h2 id="heading-control" class="sr-only">Painel de Controle</h2>
+                
+                <!-- KPIs FINANCEIROS E REPUTAÇÃO -->
+                <div class="kpi-card">
+                    <div class="kpi-group">
+                        <div class="kpi-item">
+                            <span class="kpi-label">Caixa Disponível</span>
+                            <div class="kpi-value-container">
+                                <span class="kpi-currency">R$</span>
+                                <span class="kpi-value" id="hud-money">300</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="reputation-bar-container">
+                        <div class="reputation-header">
+                            <span class="reputation-label">Reputação da Doca</span>
+                            <span class="reputation-pct" id="hud-reputation">100%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill fill-success" id="reputation-fill" style="width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LOJA DE UPGRADES -->
+                <div class="shop-container">
+                    <h3>
+                        <i data-lucide="shopping-cart"></i>
+                        Melhorias & Automação
+                    </h3>
+                    <div class="shop-list">
+                        <!-- UPGRADE 1: ESPAÇO -->
+                        <div class="shop-item" id="shop-space">
+                            <div class="shop-item-info">
+                                <div class="shop-item-icon bg-blue">
+                                    <i data-lucide="grid"></i>
+                                </div>
+                                <div class="shop-item-details">
+                                    <span class="shop-title">Expansão de Prateleiras</span>
+                                    <span class="shop-desc" id="upgrade-space-desc">Aumenta para 16 compartimentos</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-shop" id="btn-upgrade-space">
+                                <span class="btn-shop-cost" id="upgrade-space-cost">R$ 200</span>
+                            </button>
+                        </div>
+
+                        <!-- UPGRADE 2: REFRIGERAÇÃO -->
+                        <div class="shop-item" id="shop-cooling">
+                            <div class="shop-item-info">
+                                <div class="shop-item-icon bg-green">
+                                    <i data-lucide="snowflake"></i>
+                                </div>
+                                <div class="shop-item-details">
+                                    <span class="shop-title">Refrigeração Industrial</span>
+                                    <span class="shop-desc" id="upgrade-cooling-desc">Alimentos estragam 50% mais devagar</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-shop" id="btn-upgrade-cooling">
+                                <span class="btn-shop-cost" id="upgrade-cooling-cost">R$ 150</span>
+                            </button>
+                        </div>
+
+                        <!-- UPGRADE 3: ASSISTENTE ROBÔ -->
+                        <div class="shop-item" id="shop-bot">
+                            <div class="shop-item-info">
+                                <div class="shop-item-icon bg-purple">
+                                    <i data-lucide="bot"></i>
+                                </div>
+                                <div class="shop-item-details">
+                                    <span class="shop-title">Robô Assistente (IA)</span>
+                                    <span class="shop-desc" id="upgrade-bot-desc">Organiza a doca automaticamente a cada 12s</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-shop" id="btn-upgrade-bot">
+                                <span class="btn-shop-cost" id="upgrade-bot-cost">R$ 350</span>
+                            </button>
+                        </div>
+
+                        <!-- UPGRADE 4: DOCA EXPRESSA -->
+                        <div class="shop-item" id="shop-express">
+                            <div class="shop-item-info">
+                                <div class="shop-item-icon bg-orange">
+                                    <i data-lucide="truck"></i>
+                                </div>
+                                <div class="shop-item-details">
+                                    <span class="shop-title">Doca Expressa</span>
+                                    <span class="shop-desc" id="upgrade-express-desc">Novas entregas chegam 25% mais rápido</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-shop" id="btn-upgrade-express">
+                                <span class="btn-shop-cost" id="upgrade-express-cost">R$ 250</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLUNA CENTRAL: O GALPÃO (WAREHOUSE) -->
+            <section class="panel panel-center" aria-labelledby="heading-warehouse">
+                <div class="warehouse-header">
+                    <h2 id="heading-warehouse">
+                        <i data-lucide="layout"></i> Galpão de Armazenamento
+                    </h2>
+                    <span class="warehouse-capacity-indicator" id="warehouse-capacity-text">Capacidade: 0 / 12</span>
+                </div>
+
+                <!-- ZONE LEGENDS -->
+                <div class="zone-legends">
+                    <div class="legend-item font-cold">
+                        <span class="legend-color-dot cold-dot"></span>
+                        <i data-lucide="snowflake" class="legend-icon"></i>
+                        <span>Zona Fria (Alimentos)</span>
+                    </div>
+                    <div class="legend-item font-normal">
+                        <span class="legend-color-dot normal-dot"></span>
+                        <i data-lucide="package" class="legend-icon"></i>
+                        <span>Estoque Geral</span>
+                    </div>
+                    <div class="legend-item font-fragile">
+                        <span class="legend-color-dot fragile-dot"></span>
+                        <i data-lucide="gem" class="legend-icon"></i>
+                        <span>Área Segura (Frágeis)</span>
+                    </div>
+                </div>
+
+                <!-- WAREHOUSE GRID -->
+                <div class="warehouse-grid-container">
+                    <div class="warehouse-grid" id="warehouse-grid">
+                        <!-- Gerado dinamicamente via JS -->
+                    </div>
+                </div>
+
+                <!-- DOCA DE ENTRADA (RECEIVING DOCK) -->
+                <div class="dock-panel">
+                    <div class="dock-header">
+                        <h3>
+                            <i data-lucide="download"></i>
+                            Cargas na Doca de Entrada
+                        </h3>
+                        <span class="dock-tip">Selecione uma carga abaixo e clique em uma prateleira no galpão para armazenar.</span>
+                    </div>
+                    <div class="dock-slots" id="dock-slots">
+                        <!-- Gerado dinamicamente via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLUNA DIREITA: PEDIDOS (ORDERS) -->
+            <section class="panel panel-right" aria-labelledby="heading-orders">
+                <div class="orders-header">
+                    <h2 id="heading-orders">
+                        <i data-lucide="list-todo"></i> Pedidos de Clientes
+                    </h2>
+                    <span class="badge" id="orders-count-badge">0 Ativos</span>
+                </div>
+                
+                <div class="orders-list-container" id="orders-list">
+                    <!-- Gerado dinamicamente via JS -->
+                    <div class="empty-orders">
+                        <i data-lucide="inbox"></i>
+                        <p>Nenhum pedido ativo no momento.</p>
+                        <span>Aguardando chamados de clientes...</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL 1: TUTORIAL / BOAS-VINDAS -->
+    <div class="modal-backdrop" id="modal-tutorial">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📦 Bem-vindo ao StockMaster!</h2>
+            </div>
+            <div class="modal-body">
+                <p class="modal-intro">Sua missão é gerenciar um centro de distribuição inteligente. Receba cargas na doca de entrada, organize-as corretamente nas prateleiras e monte os kits de entrega para os clientes no menor tempo possível.</p>
+                
+                <div class="tutorial-steps">
+                    <div class="tut-step">
+                        <div class="tut-step-num">1</div>
+                        <div class="tut-step-text">
+                            <strong>Receber Mercadorias:</strong> Cargas chegam na <em>Doca de Entrada</em> (painel inferior). Clique em um item para selecioná-lo.
+                        </div>
+                    </div>
+                    <div class="tut-step">
+                        <div class="tut-step-num">2</div>
+                        <div class="tut-step-text">
+                            <strong>Armazenar no Setor Correto:</strong> Clique em um espaço vazio do <em>Galpão</em>.
+                            <ul>
+                                <li class="font-cold">❄️ <strong>Alimentos:</strong> Devem ir para as prateleiras de <strong>Zona Fria</strong>, senão estragam rapidamente!</li>
+                                <li class="font-normal">📦 <strong>Eletrônicos:</strong> Podem ir nas prateleiras comuns de <strong>Estoque Geral</strong>.</li>
+                                <li class="font-fragile">💎 <strong>Frágeis:</strong> Coloque na <strong>Área Segura</strong> para evitar acidentes e quebras.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tut-step">
+                        <div class="tut-step-num">3</div>
+                        <div class="tut-step-text">
+                            <strong>Despachar Pedidos:</strong> O painel da direita mostra os pedidos dos clientes. Ao ter todos os itens solicitados guardados no estoque, clique no item e em seguida no botão <strong>Despachar</strong> do pedido correspondente.
+                        </div>
+                    </div>
+                    <div class="tut-step">
+                        <div class="tut-step-num">4</div>
+                        <div class="tut-step-text">
+                            <strong>Melhorar Operações:</strong> Use seu lucro para comprar upgrades como ampliação de espaço, refrigeração avançada ou robôs inteligentes na loja!
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert-box">
+                    <i data-lucide="alert-triangle"></i>
+                    <span>Cuidado! Se a sua <strong>Reputação</strong> cair para <strong>0%</strong> devido a atrasos ou produtos estragados, você será demitido!</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary btn-large" id="btn-start-game">Começar Turno 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: GAME OVER / FIM DE TURNO -->
+    <div class="modal-backdrop" id="modal-gameover" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="gameover-title" class="danger-title">Fim de Contrato! 💼❌</h2>
+            </div>
+            <div class="modal-body text-center">
+                <p id="gameover-desc" class="modal-intro">Sua reputação despencou para 0% e a diretoria encerrou suas atividades como gerente do armazém.</p>
+                
+                <div class="score-report">
+                    <h3>Relatório de Performance</h3>
+                    <div class="report-grid">
+                        <div class="report-item">
+                            <span class="report-label">Dia Máximo Alcançado</span>
+                            <span class="report-value" id="report-days">1</span>
+                        </div>
+                        <div class="report-item">
+                            <span class="report-label">Total Faturado</span>
+                            <span class="report-value" id="report-money">R$ 0</span>
+                        </div>
+                        <div class="report-item">
+                            <span class="report-label">Pedidos Despachados</span>
+                            <span class="report-value" id="report-dispatched">0</span>
+                        </div>
+                        <div class="report-item">
+                            <span class="report-label">Perdas / Sucatas</span>
+                            <span class="report-value" id="report-spoiled">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="high-score-section" id="high-score-badge" style="display: none;">
+                    <i data-lucide="trophy" class="trophy-icon"></i>
+                    <span>Novo Recorde Pessoal!</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary btn-large" id="btn-restart-game">Tentar Novamente 🔄</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: PASSAGEM DE DIA / METAS -->
+    <div class="modal-backdrop" id="modal-daysuccess" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="success-title">🎉 Dia Concluído com Sucesso!</h2>
+            </div>
+            <div class="modal-body text-center">
+                <p class="modal-intro">Excelente trabalho! O armazém bateu a meta de faturamento diário. A diretoria aprovou um bônus especial de desempenho e liberou o próximo turno!</p>
+                
+                <div class="day-stats-card">
+                    <div class="day-stat-row">
+                        <span>Bônus de Produtividade:</span>
+                        <strong class="font-success">+ R$ <span id="day-bonus-amount">50</span></strong>
+                    </div>
+                    <div class="day-stat-row">
+                        <span>Nova Meta Diária:</span>
+                        <strong class="font-blue">R$ <span id="next-day-quota">800</span></strong>
+                    </div>
+                </div>
+
+                <p class="sub-text">O próximo dia trará mais pedidos e caminhões de mercadoria chegando mais rapidamente. Prepare-se!</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary btn-large" id="btn-next-day">Iniciar Dia <span id="next-day-num">2</span> 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Principal -->
+    <script src="app.js"></script>
+</body>
+</html>
